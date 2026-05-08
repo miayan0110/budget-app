@@ -4,15 +4,24 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzgdOU1isjQmVv_L1cFGe95
 document.getElementById('date').valueAsDate = new Date();
 
 // 讀取所有資料並顯示
-async function loadTransactions() {
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    renderList(data);
-    renderSummary(data);
-  } catch (err) {
-    document.getElementById('tx-list').innerText = '讀取失敗，請檢查網路';
-  }
+function loadTransactions() {
+  return new Promise((resolve) => {
+    const callbackName = 'callback_' + Date.now();
+    const script = document.createElement('script');
+    script.src = API_URL + '?callback=' + callbackName;
+    window[callbackName] = function(data) {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      renderList(data);
+      renderSummary(data);
+      resolve(data);
+    };
+    script.onerror = function() {
+      document.getElementById('tx-list').innerText = '讀取失敗，請檢查設定';
+      resolve([]);
+    };
+    document.body.appendChild(script);
+  });
 }
 
 // 新增一筆資料
